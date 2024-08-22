@@ -1,0 +1,3 @@
+pip install Django
+py -m pip install --upgrade pip
+pip install djangorestframework django-cors-headers
