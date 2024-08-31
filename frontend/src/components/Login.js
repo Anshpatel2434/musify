@@ -1,15 +1,90 @@
 
-import React from 'react';
-import { Link } from 'react-router-dom';
+import axios from 'axios';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
+import { useDispatch, useSelector } from 'react-redux';
+import { setLogin, setUserInfo } from '../redux/userSlice';
+import { sendToast } from '../redux/toastSlice';
+
 
 const Login = () => {
+  const [emailOrPhone, setEmailOrPhone] = useState('');
+  const [password, setPassword] = useState('');
+  const [errMsg, setErrMsg] = useState('');
+  const navigate = useNavigate();
+  const dispatch = useDispatch()
+  const isLoggedIn = useSelector((store)=>store.user.isLoggedIn)
+
+  if (isLoggedIn){
+    navigate('/')
+  }
+
+  const handleLogin = async () => {
+    try {
+      const response = await axios.post('http://localhost:8000/api/v1/login/', {
+        cred:emailOrPhone,
+        password: password,
+      });
+      
+      if (response.data.status===200){
+        dispatch(setLogin(true))
+        dispatch(setUserInfo({'email':response.data.user.email,'name':response.data.user.name}))
+        localStorage.setItem('jwt',response.data.jwt)
+        dispatch(sendToast("Welcome , "+response.data.user.name))
+        navigate('/');
+      }
+      else{
+        dispatch(sendToast("Some Error Occured while Logging IN"))
+      }
+      console.log(response.data);
+    } catch (error) {
+      if (error.response && error.response.data) {
+        setErrMsg(error.response.data.message); 
+      } else {
+        setErrMsg('An unexpected error occurred.');
+      }
+    }
+  };
+
+  const handleGoogleAuth = async (googleUser) => {
+    try {
+      const token = googleUser.credential;
+      const response = await axios.post('http://localhost:8000/api/v1/google-auth/', {
+        token: token
+      });
+
+      if (response.data.status===200){
+              dispatch(setLogin(true));
+              dispatch(setUserInfo({
+                email: response.data.email,
+                name: response.data.name,
+              }));
+        localStorage.setItem('jwt',response.data.jwt)
+        dispatch(sendToast("Welcome , "+response.data.name))
+        navigate('/');
+      }
+      else{
+        dispatch(sendToast("Some Error Occured while google Login"))
+      }
+
+    } catch (error) {
+      if (error.response && error.response.data) {
+        setErrMsg(error.response.data.error || 'An error occurred.');
+      } else {
+        console.log(error)
+        setErrMsg('An unexpected error occurred.');
+      }
+    }
+  };
+
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-tr from-[#181818] to-[#121111]">
       <div className="w-full max-w-md p-8 space-y-6 bg-[#212529] rounded-lg shadow-md">
         <h2 className="text-3xl font-bold text-center text-white">Login</h2>
         <div>
           <label htmlFor="email-or-username" className="block text-sm font-medium text-white">
-            Email or Phone Number
+            Email or Phone Number <sup className='text-red-500 text-base'>*</sup>
           </label>
           <input
             id="email-or-phone"
@@ -18,11 +93,12 @@ const Login = () => {
             required
             placeholder="Enter your email or phone number"
             className=" w-full px-3 py-2 mt-1 text-white outline-none bg-[#4e4b48] border-gray-500 rounded-md focus:ring focus:ring-indigo-400 focus:border-indigo-400"
+            onChange={(e) => setEmailOrPhone(e.target.value)}
           />
         </div>
         <div className="mt-4">
           <label htmlFor="password" className="block text-sm font-medium text-white">
-            Password
+            Password <sup className='text-red-500 text-base'>*</sup>
           </label>
           <input
             id="password"
@@ -31,6 +107,7 @@ const Login = () => {
             required
             placeholder="Enter your password"
             className=" outline-none bg-[#4e4b48] w-full px-3 py-2 mt-1 text-black  border border-gray-500 rounded-md focus:ring focus:ring-indigo-400 focus:border-indigo-400"
+            onChange={(e) => setPassword(e.target.value)}
           />
           <div className="mt-2 text-sm text-left">
             <Link to="/forgot-password" className="text-indigo-400 hover:underline">
@@ -40,6 +117,7 @@ const Login = () => {
         </div>
         <div>
           <button
+            onClick={handleLogin}
             type="submit"
             className="w-full px-4 py-2 mt-4 font-bold text-white bg-[#234459] rounded-md hover:bg-[#2d5771] focus:ring focus:ring-indigo-400"
           >
@@ -54,17 +132,14 @@ const Login = () => {
             <span className="px-2  text-gray-300">OR</span>
           </div>
         </div>
-        <div >
-        <button
-            type="button"
-            className="flex w-full pl-24 gap-2 py-2 font-bold text-black bg-[#192d3a]  outline-none border-gray-300 rounded-md hover:bg-[#2d5771] focus:ring focus:ring-indigo-400  items-center" 
-          >
-            <svg  xmlns="http://www.w3.org/2000/svg" x="0px" y="0px" width="30" height="30" viewBox="0 0 48 48">
-              <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"></path><path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"></path><path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"></path><path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24C44,22.659,43.862,21.35,43.611,20.083z"></path>
-            </svg>
-
-            <span className='px-1 text-white'>Login with Google</span>
-          </button>
+        <div className='w-full flex justify-center items-center'>
+          <GoogleOAuthProvider clientId='1074917906223-pf2simq4kkr0itiue7f7ofb9t6bbikfq.apps.googleusercontent.com'>
+            <GoogleLogin
+              onSuccess={handleGoogleAuth}
+              onFailure={(error) => setErrMsg('Google Sign-In failed')}
+              useOneTap
+            />
+          </GoogleOAuthProvider>
         </div>
         <div className="mt-6 text-center text-white">
           <p>
@@ -75,7 +150,7 @@ const Login = () => {
           </p>
         </div>
         <div className="mt-4 text-center text-red-500">
-          Invalid email or password. Please try again.
+          {errMsg}
         </div>
       </div>
     </div>

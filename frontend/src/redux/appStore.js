@@ -5,6 +5,7 @@ import toggleSlice from "./toggleSlice";
 import playerSlice from "./playerSlice";
 import playlistSlice from "./playlistSlice";
 import toastSlice from "./toastSlice";
+import userSlice from "./userSlice";
 
 const appStore = configureStore({
     reducer:{
@@ -14,6 +15,7 @@ const appStore = configureStore({
         player : playerSlice ,
         playlist : playlistSlice,
         toast:toastSlice,
+        user:userSlice,
     }
 })
 

@@ -3,6 +3,7 @@ import { createPlaylist, deletePlaylist, renamePlaylist } from '../redux/playlis
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { sendToast } from '../redux/toastSlice';
+import axios from 'axios';
 
 const CreatePlaylistPopup = ({ onClose,edit,old,del}) => {
   // edit means editing is enabeled and old means old playlist name
@@ -14,14 +15,35 @@ const CreatePlaylistPopup = ({ onClose,edit,old,del}) => {
   const availablePlaylists = useSelector((store)=>store.playlist.playlist)
   const availablePlaylistsNames = Object.keys(availablePlaylists)
   const navigate = useNavigate()
+  const userEmail = useSelector((store)=>store.user.user.email)
 
 
-  const handleCreateClick = () => {
+  const handleCreateClick = async() => {
     if (del){
-      dispatch(deletePlaylist(old));
-      dispatch(sendToast("Deleted Playlist "+old.toUpperCase()))
-      navigate('/playlist')
+    
+      try{
+        const response = await axios.post("http://localhost:8000/api/v1/deleteplaylist/",
+          {
+            'email':userEmail,
+            'name':old.toUpperCase(),
+          })
+          console.log(response.data)
+        if (response.data.status ===200){
+          dispatch(deletePlaylist(old));
+          dispatch(sendToast("Deleted Playlist "+old.toUpperCase()))
+          navigate('/playlist')
+        }
+        else{
+          dispatch(sendToast("Couldn't Delete Playlist "))
+        }
+      }
+      catch(err){
+        console.log(err)
+        dispatch(sendToast("Couldn't Delete Playlist "))
+      }
       onClose();
+
+
     }
     else if (!playlistName.trim()) {
       setErrorMessage('Please enter a playlist name.');
@@ -30,20 +52,60 @@ const CreatePlaylistPopup = ({ onClose,edit,old,del}) => {
     }
     else {
       setErrorMessage('');
-      if (edit){
-        dispatch(renamePlaylist({oldName:old,newName:playlistName.toUpperCase()}))
-        dispatch(sendToast("Playlist Renamed"))
-        navigate('/userplaylists/'+playlistName.toUpperCase())
+      if (edit){ //Renaming Playlist
+      
+        try{
+          const response = await axios.post("http://localhost:8000/api/v1/renameplaylist/",
+            {
+              'email':userEmail,
+              'oldName':old.toUpperCase(),
+              'newName':playlistName.toUpperCase()
+            })
+            console.log(response.data)
+          if (response.data.status ===200){
+            dispatch(renamePlaylist({oldName:old,newName:playlistName.toUpperCase()}))
+            dispatch(sendToast("Playlist Renamed"))
+            navigate('/userplaylists/'+playlistName.toUpperCase())
+          }
+          else{
+            dispatch(sendToast("Couldn't Rename Playlist "))
+          }
+        }
+        catch(err){
+          console.log(err)
+          dispatch(sendToast("Couldn't Rename Playlist "))
+        }
         onClose();
+
+
       }
-      else {
-        dispatch(createPlaylist({playlist:playlistName}));
-        dispatch(sendToast("Created Playlist "+ playlistName.toUpperCase()))
+      else { //Create Playlist
+
+        try{
+          const response = await axios.post("http://localhost:8000/api/v1/createplaylist/",
+            {
+            'name':playlistName.toUpperCase(),
+            'email':userEmail
+            })
+            console.log(response.data)
+          if (response.data.status ===200){
+            dispatch(createPlaylist({playlist:playlistName}));
+            dispatch(sendToast("Created Playlist "+ playlistName.toUpperCase()))
+          }
+          else{
+            dispatch(sendToast("Couldn't create Playlist "+ playlistName.toUpperCase()))
+          }
+        }
+        catch(err){
+          console.log(err)
+          dispatch(sendToast("Couldn't create Playlist "+ playlistName.toUpperCase()))
+        }
         onClose();
 
       }
     }
   };
+
 
   return (<>
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm">

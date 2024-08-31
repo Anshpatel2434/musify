@@ -65,7 +65,7 @@ const DisplayPlaylist = ({type}) => {
 
   return (
     <div className="w-full flex flex-col h-[100vh] bg-gradient-to-tr from-[#000000] to-[#434343]">
-      {isLoading || !currentPlaylist ? <Spinner/> : currentPlaylist==='NOTFOUND' ? <ErrorPage/> :
+      {currentPlaylist==='NOTFOUND' ? <ErrorPage/> :
       <div className='w-full flex flex-col justify-center items-start md:pl-24 '>
         <div className='flex w-full border-b-[3px] border-black sticky'>
           <h1 className="w-full md:text-[2rem] text-[1.5rem] md:text-left text-center text-white mb-2 

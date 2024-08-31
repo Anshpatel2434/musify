@@ -5,25 +5,45 @@ import { addToQueue } from '../redux/playerSlice';
 import { useLocation } from 'react-router-dom';
 import { removeFromPlaylist } from '../redux/playlistSlice';
 import { sendToast } from '../redux/toastSlice';
+import axios from 'axios';
 
 const OptionPopup = ({options  , setShowAddToPlayList , setShowCenterPopup,showPopup,setShowPopup,popupMessage,setPopupMessage}) => {
   const dispatch = useDispatch()
   const currentSong = useSelector((store)=>store.playlist.selectedSong)
   const location = useLocation()
   const currentUrl = location.pathname.split('/');
+  const userEmail = useSelector((store)=>store.user.user.email)
 
 
-    function playlistFunctions(option ){
+    async function playlistFunctions(option ){
         if (option==='Add to Playlist'){
             setShowAddToPlayList(true)
             setShowCenterPopup(false)
         } 
         else if (option ==='Remove from this playlist') {
           var name = currentSong['name']
-          setShowCenterPopup(false)
           var playlist=currentUrl[2]
-          dispatch(sendToast('Removed from '+playlist))
-          dispatch(removeFromPlaylist({playlist,name}))
+
+          try{
+            const response = await axios.post('http://localhost:8000/api/v1/removefromplaylist/',{
+              'email':userEmail,
+              'song':currentSong,
+              'playlistName':playlist,
+            })
+
+            if (response.data.status===200){
+              setShowCenterPopup(false)
+              dispatch(sendToast('Removed from '+playlist))
+              dispatch(removeFromPlaylist({playlist,name}))
+            }
+            else{
+              dispatch(sendToast("Couldn't Remove from "+playlist))
+            }
+          }
+          catch(err){
+            console.log(err)
+            dispatch(sendToast("Couldn't Remove from "+playlist))
+          }
         }
         else{
           dispatch(sendToast("Song Added to Queue"))

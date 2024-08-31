@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { FaTimes } from 'react-icons/fa';
 import { addToPlaylist, createPlaylist } from '../redux/playlistSlice';
 import { sendToast } from '../redux/toastSlice';
+import axios from 'axios';
 
 const PlayListPopup = ({ oldPlayList, setOldPlaylist, setShowAddToPlayList, setShowCenterPopup ,setShowPopup,setPopupMessage }) => {
   const playlist = useSelector((store) => store.playlist.playlist);
@@ -11,6 +12,8 @@ const PlayListPopup = ({ oldPlayList, setOldPlaylist, setShowAddToPlayList, setS
   const [songStatus, setSongStatus] = useState({});
   const inp = useRef(null);
   const dispatch = useDispatch();
+  const userEmail = useSelector((store)=>store.user.user.email)
+
 
   useEffect(() => {
     const status = {};
@@ -20,7 +23,7 @@ const PlayListPopup = ({ oldPlayList, setOldPlaylist, setShowAddToPlayList, setS
     setSongStatus(status);
   }, [playlist, selectedSong]);
 
-  function submitHandler(e) {
+  async function submitHandler(e) {
     e.preventDefault();
     const newPlaylistName = inp.current.value.trim().toUpperCase();
 
@@ -32,9 +35,28 @@ const PlayListPopup = ({ oldPlayList, setOldPlaylist, setShowAddToPlayList, setS
       setErrorMessage("Please Enter a Valid Name");
       return;
     }
-    setOldPlaylist(!oldPlayList);
-    setErrorMessage("");
-    dispatch(createPlaylist({ playlist: inp.current.value }));
+
+    try{
+      const response = await axios.post("http://localhost:8000/api/v1/createplaylist/",
+        {
+        'name':inp.current.value.toUpperCase(),
+        'email':userEmail
+        })
+        console.log(response.data)
+      if (response.data.status ===200){
+        setOldPlaylist(!oldPlayList);
+        setErrorMessage("");
+        dispatch(createPlaylist({ playlist: inp.current.value }));
+        dispatch(sendToast("Created Playlist "+ inp.current.value.toUpperCase()))
+      }
+      else{
+        dispatch(sendToast("Couldn't create Playlist "+ inp.current.value.toUpperCase()))
+      } 
+    }
+    catch(err){
+      console.log(err)
+      dispatch(sendToast("Couldn't create Playlist "+inp.current.value.toUpperCase()))
+    }
   }
 
   function clickHandler() {
@@ -42,10 +64,28 @@ const PlayListPopup = ({ oldPlayList, setOldPlaylist, setShowAddToPlayList, setS
     setShowCenterPopup(true);
   }
 
-  function toPlaylist(name) {
-    dispatch(addToPlaylist({ playlist: name, song: selectedSong }));
-    dispatch(sendToast("Song Added to "+name))
-    setShowAddToPlayList(false);
+  async function toPlaylist(name) {
+
+    try{
+      const response = await axios.post('http://localhost:8000/api/v1/addtoplaylist/',{
+        'email':userEmail,
+        'song':selectedSong,
+        'playlistName':name,
+      })
+
+      if (response.data.status===200){
+        dispatch(addToPlaylist({ playlist: name, song: selectedSong }));
+        dispatch(sendToast("Song Added to "+name))
+        setShowAddToPlayList(false);
+      }
+      else{
+        dispatch(sendToast("Couldn't add song to "+name))
+      }
+    }
+    catch(err){
+      dispatch(sendToast("Couldn't add song to "+name))
+    }
+    
   }
 
   return (

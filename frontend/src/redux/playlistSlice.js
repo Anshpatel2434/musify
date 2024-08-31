@@ -50,10 +50,16 @@ const playlistSlice = createSlice({
             state.likedSongs=state.likedSongs.filter(song => song.name !== action.payload.name);
         },
         setSelectedSong : (state , action)=>{
-        state.selectedSong = action.payload
-     }
+            state.selectedSong = action.payload
+        },
+        setPlaylist :(state,action)=>{
+            state.playlist = action.payload
+        },
+        setLikedSong :(state,action)=>{
+            state.likedSongs = action.payload
+        },
     }
 });
 
-export const { createPlaylist,deletePlaylist,renamePlaylist, addToPlaylist, removeFromPlaylist,addToLikedSongs,removeFromLikedSongs,setSelectedSong } = playlistSlice.actions;
+export const { setPlaylist,setLikedSong,createPlaylist,deletePlaylist,renamePlaylist, addToPlaylist, removeFromPlaylist,addToLikedSongs,removeFromLikedSongs,setSelectedSong } = playlistSlice.actions;
 export default playlistSlice.reducer;
