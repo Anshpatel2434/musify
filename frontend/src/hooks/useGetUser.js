@@ -33,6 +33,7 @@ const useGetUser =()=>{
                         localStorage.removeItem("jwt");
                         dispatch(setLogin(false))
                         dispatch(sendToast("Session expired, please log in again."));
+                        window.location.href='/login'
                     }, timeout);
                 }
             }

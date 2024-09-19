@@ -20,7 +20,6 @@ import useGetUser from './hooks/useGetUser';
 import { useSelector } from 'react-redux';
 
 function App() {
-  
 
     useGetUser();
     useGetToken();
@@ -58,7 +57,7 @@ function App() {
             <>
               <Route path="/login" element={<Login />} />
               <Route path="/signup" element={<Signup />} />
-              <Route path="*" element={<Navigate to={"/login"} />} />
+              {/* <Route path="*" element={<Navigate to={"/login"} />} /> */}
             </>
           )}
         </Routes>

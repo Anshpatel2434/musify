@@ -5,7 +5,7 @@ from .models import *
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['name','email','phone', 'password','birthdate']
+        fields = ['name','email','phone', 'password','birthdate','profilePic']
         extra_kwargs = {
             'password': {'write_only': True, 'min_length': 8},
         }
@@ -19,6 +19,8 @@ class UserSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"otp": "Invalid OTP"})
         if User.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError({"email": "Email is already in use."})
+        if User.objects.filter(phone=data['phone']).exists():
+            raise serializers.ValidationError({"email": "Given Contact Number is already in use."})
         return data
     
 class UserLoginSerializer(serializers.ModelSerializer):
@@ -59,9 +61,18 @@ class LikedSongSerializer(serializers.ModelSerializer):
         fields = ['id', 'song', 'liked_at']
         
 class HistorySerializer(serializers.ModelSerializer):
-    song = SongSerializer(read_only=True)  # Nest the SongSerializer to include song details
+    song = SongSerializer(read_only=True) 
 
     class Meta:
         model = History
         fields = ['id', 'song', 'played_at', 'play_count']
         
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['name','phone','birthdate']
+
+    def validate(self, data):
+        if User.objects.filter(phone=data['phone']).exists():
+            raise serializers.ValidationError({"phone": "Given Contact Number is already in use."})
+        return data

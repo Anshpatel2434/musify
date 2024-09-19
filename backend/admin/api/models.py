@@ -11,6 +11,7 @@ class User(models.Model):
     password=models.CharField(max_length=20,validators=[MinLengthValidator(8)])
     created_at = models.DateTimeField(auto_now_add=True)
     birthdate=models.DateField(null=True)
+    profilePic = models.CharField(max_length=300, null=True, blank=True)
 
     def __str__(self):
         return self.name +" : "+self.email
@@ -18,7 +19,6 @@ class User(models.Model):
     def save(self, *args, **kwargs):
         if self.pk is None:
             self.password = make_password(self.password)
-            # self.created_at = models.DateTimeField(auto_now_add=True)
         super().save(*args, **kwargs)
         
     def check_password(self, raw_password):
@@ -56,10 +56,6 @@ class LikedSong(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     song = models.ForeignKey(Song, on_delete=models.CASCADE)
     liked_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        unique_together = ('user', 'song')
-        ordering = ['-liked_at']
 
     def __str__(self):
         return f"{self.user.name} liked {self.song.name}"

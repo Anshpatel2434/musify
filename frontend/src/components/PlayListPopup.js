@@ -83,7 +83,7 @@ const PlayListPopup = ({ oldPlayList, setOldPlaylist, setShowAddToPlayList, setS
       }
     }
     catch(err){
-      dispatch(sendToast("Couldn't add song to "+name))
+      dispatch(sendToast("Error : Couldn't add song to "+name + err))
     }
     
   }
@@ -108,13 +108,14 @@ const PlayListPopup = ({ oldPlayList, setOldPlaylist, setShowAddToPlayList, setS
               {playlist ? (
                 Object.keys(playlist).map((option, index) => {
                   const isSongAlreadyAdded = songStatus[option];
-                  console.log("INSIDE")
-                  console.log(option)
-                  console.log(isSongAlreadyAdded)
                   return (
                     <p
                       className={`px-8 text-xl py-2 w-full flex justify-between items-center hover:bg-gray-800 border-b-[0.5px] border-b-slate-600 ${isSongAlreadyAdded ? 'pointer-events-none bg-gray-600' : ''}`}
-                      onClick={() => !isSongAlreadyAdded && toPlaylist(option)}
+                      onClick={() => {
+                         if(!isSongAlreadyAdded){
+                           toPlaylist(option)
+                          }
+                        }}
                       key={index}
                     >
                       <span>{option}</span>

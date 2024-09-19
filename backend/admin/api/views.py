@@ -3,24 +3,17 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny  
 from rest_framework import generics, status, permissions
 from django.http import JsonResponse
-from rest_framework_simplejwt.tokens import RefreshToken
 from .serializers import *
 import requests
 from .models import *
-from django.contrib.auth.hashers import check_password
-from django.db import models
 from .sendmail import sendMail
 import random
 from django.utils import timezone  
 from datetime import timedelta  
 import jwt  
 from django.conf import settings 
-# from django.contrib.auth import get_user_model
-# from rest_framework.decorators import api_view
-# from social_core.backends.google import GoogleOAuth2
-# from social_django.utils import load_strategy,load_backend
-# from social_core.exceptions import AuthException, AuthTokenError, AuthForbidden
-# from rest_framework.authtoken.models import Token
+from django.core.files.storage import default_storage
+import json
 
 class Hello(APIView):
     def get(self, request, format=None):
@@ -202,12 +195,14 @@ class GetUserDataView(APIView):
     def get_likedsongs(self, user):
         liked_songs = LikedSong.objects.filter(user=user).select_related('song')
         serializer = LikedSongSerializer(liked_songs, many=True)
-        return serializer.data
+        allLikedSongs=[song['song'] for song in serializer.data]
+        return allLikedSongs
 
     def get_history(self, user):
         history_records = History.objects.filter(user=user).select_related('song')
         serializer = HistorySerializer(history_records, many=True)
-        return serializer.data
+        allHistory=[song['song'] for song in serializer.data]
+        return allHistory
 
     def get_profile(self, user):
         serializer = UserSerializer(user)
@@ -229,10 +224,10 @@ class GetUserDataView(APIView):
             history = self.get_history(user)
             profile = self.get_profile(user)
 
-            print(playlist)
-            print(likedsongs)
-            print(history)
-            print(profile)
+            # print(playlist)
+            # print(likedsongs)
+            # print(history)
+            # print(profile)
 
             return Response({
                 'status': 200,
@@ -260,7 +255,6 @@ class CreatePlaylistView(APIView):
             user = User.objects.get(email=email)
             playlist = Playlist.objects.create(user=user,name=name)
             print("playlist created")
-            print(playlist)
             playlist.save()
             return Response({
                 'status':200,
@@ -308,7 +302,6 @@ class DeletePlaylistView(APIView):
             playlist=Playlist.objects.get(user=user,name=name)
             playlist.delete()
             print("delete playlist")
-            print(playlist)
             return Response({
                     'status':200,
                     'message':"Playlist deleted successfully"
@@ -330,23 +323,26 @@ class AddToPlaylistView(APIView):
         try:
             user=User.objects.get(email=email)
             playlist=Playlist.objects.get(user=user,name=playlistName)
-            song,created = Song.objects.get_or_create(
+
+            song, created = Song.objects.get_or_create(
                 name=songData['name'],
-                    url=songData['url'],
-                    image=songData['image'],
-                    singer=songData['singer'],
-                    duration=songData['duration'],
-                    artist=songData['artist'],
-                )
+                defaults={
+                    'url': songData['url'],
+                    'image': songData['image'],
+                    'singer': songData.get('singer',''),
+                    'duration': songData['duration'],
+                    'artist': songData['artist'],
+                }
+            )
             
             playlist_song=PlaylistSong.objects.create(playlist=playlist,song=song)
-            
+
             return Response({
                 'status':200,
                 'message':"Song added to playlist"
             })
         except Exception as e:
-            print(e)
+            print("Error while adding song : ",e)
             return Response({
                 'status':404,
                 'message':"Error while adding song to playlist"
@@ -385,3 +381,132 @@ class RemoveFromPlaylistView(APIView):
                 'status':404,
                 'message':"Error while deleting the Song from playlist"
             })
+            
+class LikedSongView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self,request):
+        email = request.data.get('email')
+        songData = request.data.get('song')
+        
+        try:
+            user=User.objects.get(email=email)
+            song, created = Song.objects.get_or_create(
+                name=songData['name'],
+                defaults={
+                    'url': songData['url'],
+                    'image': songData['image'],
+                    'singer': songData['singer'],
+                    'duration': songData['duration'],
+                    'artist': songData['artist'],
+                }
+            )
+            
+            liked_song, liked_created = LikedSong.objects.get_or_create(
+                user=user,
+                song=song
+            )
+            
+            if not liked_created:
+                liked_song.delete()
+                message = "Song unliked"
+            else:
+                message = "Song liked"
+
+            return Response({
+                'status': 200,
+                'message': message
+            })
+
+        except Exception as e:
+            print(e)
+            return Response({
+                'status':404,
+                'message':"Error while Liking the Song"
+            })
+                   
+class HistoryView(APIView):
+    permission_classes = [AllowAny]
+    
+    def post(self,request):
+        email = request.data.get('email')
+        songData = request.data.get('song')
+        
+        try:
+            user=User.objects.get(email=email)
+            song, created = Song.objects.get_or_create(
+                name=songData['name'],
+                defaults={
+                    'url': songData['url'],
+                    'image': songData['image'],
+                    'singer': songData['singer'],
+                    'duration': songData['duration'],
+                    'artist': songData['artist'],
+                    }
+                )
+            
+            history,history_created = History.objects.get_or_create(
+                user=user,
+                song=song
+            )
+            
+            if not history_created:
+                history.play_count+=1
+                history.save()
+            
+                
+            return Response({
+                'status': 200,
+                'message': "Song added to History"
+            })
+
+        except Exception as e:
+            print(e)
+            return Response({
+                'status':404,
+                'message':"Error while Adding the Song to the history"
+            })
+            
+class ProfileView(APIView):
+    permission_classes = [AllowAny]
+    
+    
+    def post(self,request):
+        errMsg=''
+        userRec=json.loads(request.data['user'])
+                
+        email = userRec.get('email')
+        phone = userRec.get('phone')   
+        name = userRec.get('name')
+        birthdate = userRec.get('birthdate')
+        
+        profilePic=request.data.get('image')
+
+        try:
+            user=User.objects.get(email=email)
+            if phone and User.objects.filter(phone=int(phone)).exists() and user.phone !=phone:
+                errMsg="Phone Number Already exists"
+                raise Exception("Phone Number Already exists")
+
+            user.phone=phone
+            user.name=name
+            user.birthdate=birthdate
+            
+            if profilePic :
+                file_name = default_storage.save(profilePic.name, profilePic) 
+                user.profilePic = request.build_absolute_uri(f"/media/{file_name}")
+
+            user.save()
+
+            return  Response({
+                'status': 200,
+                'message': "Profile Updated Successfully"
+                })
+        except Exception as e:
+            errMsg = errMsg if  errMsg else  "Couldn't Update Profile "
+            print(e)
+            return Response({
+                'status': 404,
+                'message': errMsg
+                })
+            

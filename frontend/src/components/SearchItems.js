@@ -10,6 +10,7 @@ import OptionPopup from './OptionPopup';
 import PlayListPopup from './PlayListPopup';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { sendToast } from '../redux/toastSlice';
+import axios from 'axios';
 
 const Searchitems = ({ image, name, artist, duration, singer, type, url }) => {
   const dur = (duration / (60 * 1000)).toFixed(2);
@@ -25,6 +26,8 @@ const Searchitems = ({ image, name, artist, duration, singer, type, url }) => {
   const [showAddToPlayList, setShowAddToPlayList] = useState(false);
   const [oldPlayList, setOldPlaylist] = useState(true);
   const nowPlayingObj = { image, name, artist, duration, singer, type, url };
+  const userEmail = useSelector((store)=>store.user.user.email)
+
   const options = [
     { label: 'Add to Queue' },
     { label: 'Add to Playlist'}
@@ -38,18 +41,49 @@ const Searchitems = ({ image, name, artist, duration, singer, type, url }) => {
     setLiked(likedSongs.some((song) => song.name === name));
   }
 
-  const clickHandler = () => {
+  const clickHandler = async () => {
     if(!type){
-    dispatch(addNowPlaying(nowPlayingObj));
+    
+    try{
+      const response = await axios.post('http://localhost:8000/api/v1/history/', {
+        'email':userEmail,
+        'song':nowPlayingObj,
+    })
+
+    if (response.data.status===200){
+      dispatch(addNowPlaying(nowPlayingObj));
     }else{
+      dispatch(sendToast("Error Playing song !!"))
+    }
+  }catch(err){
+    dispatch(sendToast("Error Playing song !!"))
+  }
+  }
+    else{
       navigate(`result/${name}`)
     }
   };
 
-  const toggleLike = () => {
-    dispatch(liked ? removeFromLikedSongs(nowPlayingObj) : addToLikedSongs(nowPlayingObj));
-    setLiked(!liked);
-    dispatch(!liked ? sendToast('Added to Liked Songs') : sendToast ('Removed from Liked Songs'))
+  const toggleLike = async () => {
+
+    try{
+      const response = axios.post('http://localhost:8000/api/v1/likedsong/',{
+        'email':userEmail,
+        'song':nowPlayingObj,
+      })
+
+      if ((await response).data.status===200){
+        dispatch(liked ? removeFromLikedSongs(nowPlayingObj) : addToLikedSongs(nowPlayingObj));
+        dispatch(liked ? sendToast ('Removed from Liked Songs') : sendToast('Added to Liked Songs'))
+        setLiked(!liked);
+      }
+      else{
+        dispatch(!liked ? sendToast("Couldn't Add to Liked Songs") : sendToast ("Couldn't Remove from Liked Songs"))
+      }
+    }
+    catch(err){
+      dispatch(!liked ? sendToast("Couldn't Add to Liked Songs") : sendToast ("Couldn't Remove from Liked Songs"))
+    }
   };
 
   const toggleCenterPopup = () => {setShowCenterPopup((prev) => !prev)

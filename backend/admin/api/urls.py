@@ -2,6 +2,8 @@
 from django.urls import path
 from .views import *
 from rest_framework_simplejwt.views import TokenRefreshView
+from django.conf import settings
+from django.conf.urls.static import static
 
 urlpatterns = [
     path('hello/', Hello.as_view(), name='hello'),
@@ -16,4 +18,7 @@ urlpatterns = [
     path('deleteplaylist/', DeletePlaylistView.as_view(), name='deleteplaylist'),
     path('addtoplaylist/', AddToPlaylistView.as_view(), name='addtoplaylist'),
     path('removefromplaylist/', RemoveFromPlaylistView.as_view(), name='removefromplaylist'),
+    path('likedsong/', LikedSongView.as_view(), name='likedsong'),
+    path('history/', HistoryView.as_view(), name='history'),
+    path('profile/', ProfileView.as_view(), name='profile'),
 ]

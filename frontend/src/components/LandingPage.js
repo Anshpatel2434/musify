@@ -4,8 +4,11 @@ import Discover from './Discover';
 import { useSelector } from 'react-redux';
 import SearchResults from './SearchResults';
 import Searchbar from './Searchbar';
+import useGetUser from '../hooks/useGetUser';
 
 const LandingPage = () => {
+
+  useGetUser();
     const searchToggle = useSelector((store)=>store.toggle.searchToggle)
 
     return ( 
